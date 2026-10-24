@@ -1,0 +1,45 @@
+// SYNTHETIC FIXTURE for selftest-checker.sh — not agent output, never an experiment result.
+// Expected checker score: 3/3 bugs caught, no static warnings.
+import { test, expect } from '../../../src/fixtures';
+import { aBooking, type BookingBuilder } from '../../../src/data/bookings/BookingBuilder';
+import type { Booking, ErrorResponse } from '../../../src/models';
+
+type Case = { name: string; patch: (b: BookingBuilder) => BookingBuilder };
+type InvalidCase = Case & { fields: string[] };
+
+const invalidCases: InvalidCase[] = [
+  { name: 'checkOut is before checkIn', patch: (b) => b.checkOutDaysAfterCheckIn(-1), fields: ['checkOut'] },
+  { name: 'checkOut equals checkIn', patch: (b) => b.checkOutDaysAfterCheckIn(0), fields: ['checkOut'] },
+  { name: 'guests is 0', patch: (b) => b.withGuests(0), fields: ['guests'] },
+  { name: 'guests is 9', patch: (b) => b.withGuests(9), fields: ['guests'] },
+  { name: 'checkIn is missing', patch: (b) => b.withoutCheckIn(), fields: ['checkIn'] },
+];
+const acceptedCases: Case[] = [
+  { name: 'guests is 1', patch: (b) => b.withGuests(1) },
+  { name: 'guests is 8', patch: (b) => b.withGuests(8) },
+  { name: 'checkOut is one day after checkIn', patch: (b) => b.checkOutDaysAfterCheckIn(1) },
+];
+
+test.describe(
+  'POST /bookings validation',
+  { tag: ['@api', '@regression'], annotation: { type: 'issue', description: 'BOOK-412' } },
+  () => {
+    for (const c of invalidCases) {
+      test(`rejects booking when ${c.name}`, async ({ bookingsClient }) => {
+        const response = await bookingsClient.create(c.patch(aBooking()).build());
+        expect(response.status()).toBe(400);
+        const body = (await response.json()) as ErrorResponse;
+        expect(body.code).toBe('VALIDATION_ERROR');
+        expect(body.errors.map((e) => e.field)).toEqual(c.fields);
+      });
+    }
+    for (const c of acceptedCases) {
+      test(`accepts booking when ${c.name}`, async ({ bookingsClient }) => {
+        const response = await bookingsClient.create(c.patch(aBooking()).build());
+        expect(response.status()).toBe(201);
+        const booking = (await response.json()) as Booking;
+        await bookingsClient.delete(booking.id);
+      });
+    }
+  },
+);
