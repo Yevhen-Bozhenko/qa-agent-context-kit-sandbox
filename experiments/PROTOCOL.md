@@ -144,7 +144,8 @@ experiments/scripts/start-service.sh experiment-v1               # separate term
 3. When the agent says it's done, **don't correct anything yet**. Still as `qa-runner`: `/export` →
    save to file (e.g. `export.txt`), `/exit`, then move it, unedited, into `C:\runs\r01\_transcript\`
    (`mkdir -p _transcript && mv export.txt _transcript/`), together with the run's screenshots
-   (`mv ~/Pictures/Screenshots/*.png _transcript/`). Then, as you:
+   (`cp ~/Pictures/Screenshots/*.png _transcript/ && rm ~/Pictures/Screenshots/*.png` — copy, don't
+   move: a moved file keeps its private permissions and `check-run.sh` can't read it). Then, as you:
    ```bash
    experiments/scripts/check-run.sh r01     # writes runs/r01/agent.diff and check-results.md
    ```
