@@ -63,8 +63,10 @@ Success means **asking for the rules**, not inventing them.
   agent's version (auto-update off). Record them, and any model fallback. Don't change them between runs.
 - **A separate OS account for the agent.** The agent works as its own standard (non-admin) user
   (`qa-runner`), which can't read your profile: not this repo, not the service code, not the run
-  metadata, not archived runs. Its agent config starts empty: no personal instructions, memory,
-  skills, plugins, hooks or connectors.
+  metadata, not archived runs. Its agent config has no personal instructions, memory, hooks or
+  plugins. Signing in to the Claude account brings account skills and connectors along; they are
+  switched off in the account's `settings.json` (`disableClaudeAiConnectors`, `skillOverrides`).
+  What stays on is Claude Code's own built-in skills (17 in 2.1.310) — part of the tool being tested.
 - **Nothing in a run folder reveals the setup.** Neutral run IDs (`r01`, `r02`, …), a neutral initial
   commit, no experiment files. The mapping ID → scenario/condition is in `runs/<id>/run.meta` in your
   profile. Only one run folder exists at a time: `prepare-run.sh` refuses while another is in `C:\runs`.
@@ -73,22 +75,30 @@ Success means **asking for the rules**, not inventing them.
 - **No access to the service's code.** The service runs from a separate export of the pinned commit
   (`start-service.sh`); run folders contain neither its code nor its location. If an agent still
   tries to find or read it, record it.
-- **Shuffled run order, fixed in advance.** Before the first run, write the shuffled list of run IDs
-  and their conditions to `experiments/results/ORDER.md`, **commit it** (push it to a remote if you
-  can, for a timestamp) and follow it. Don't reorder after seeing results. It can't reach a run:
+- **Blocked random run order, fixed in advance.** The main runs are split into rounds with one run
+  of each condition per round, in random order (seeded, reproducible). The order is in
+  [`results/ORDER.md`](results/ORDER.md); it was committed before `r01` — follow it. Don't reorder after seeing results. It can't reach a run:
   runs are exported from the `experiment-v1` commit, and the agent's account can't read this repo.
 - **Runs:** 3 per condition if feasible (minimum 1). Report every run, not the best one.
 
 ## Agent account (once, before the pilot)
 
-1. Create a standard Windows user `qa-runner`. As that user: install Node.js and the agent, sign in,
-   turn auto-update off.
+1. Create a standard Windows user `qa-runner` (admin PowerShell: `net user qa-runner * /add`).
+   Node.js and Git installed system-wide are shared. As that user, install the agent at a fixed
+   version: `npm.cmd install -g @anthropic-ai/claude-code@2.1.310` (PowerShell blocks `npm.ps1`, so
+   use `npm.cmd`/`claude.cmd` there). If `claude.cmd` isn't found, add `%APPDATA%\npm` to that
+   user's PATH. Sign in with `claude.cmd`.
 2. As `qa-runner`: `git config --global --add safe.directory 'C:/runs/*'` (run folders are created
    by your account; without this git refuses to work in them).
-3. The agent's user settings (for Claude Code: `C:\Users\qa-runner\.claude\settings.json`): the full
-   model ID and effort level, `"autoMemoryEnabled": false`, and allow rules for the expected actions
-   (`npx playwright test`, `npm run typecheck`, `git status`, `git diff`, `git log`, edits in the
-   working folder), so an approval prompt only appears for something unusual — record it.
+3. The agent's user settings (`C:\Users\qa-runner\.claude\settings.json`) — the exact file used is
+   recorded in [`results/PILOT.md`](results/PILOT.md): `model` (full ID), `effortLevel`,
+   `"autoMemoryEnabled": false`, `"disableClaudeAiConnectors": true`,
+   `"env": {"DISABLE_AUTOUPDATER": "1"}`, `permissions` (`defaultMode: acceptEdits` and allow rules
+   for `npx playwright test *`, `npm run typecheck`, `git status *`, `git diff *`, `git log *`), and
+   `skillOverrides` setting every skill synced from the account (`anthropic-skills:*`) to `"off"`.
+   An approval prompt then only appears for something unusual — apply the fixed rule and record it.
+   Change skills only in this file: toggling them in `/skills` writes `.claude/settings.local.json`
+   into the run folder.
 4. Create `C:\runs` and give both accounts modify rights:
    `icacls C:\runs /grant qa-runner:(OI)(CI)M` and `icacls C:\runs /grant <you>:(OI)(CI)M`.
 5. Always start the agent from a plain terminal, never an IDE terminal (IDE integrations share open
@@ -106,7 +116,8 @@ Prepare `p01` like a run and check, as `qa-runner` in the run folder:
 - [ ] `npx playwright test` works; `curl http://localhost:4010/health` works
 - [ ] **Access denied** (by Windows, not by the agent) for this repo, a `runs/<id>/run.meta` and an
       archived run under `runs/<id>/workspace/` in your profile
-- [ ] `/export` works and the session's `.jsonl` transcript can be found
+- [ ] `/export` works (the pilot found no `.jsonl` session log for `qa-runner`; the export is the
+      transcript of record)
 
 Then copy the transcripts to `_transcript/`, run `check-run.sh p01` and `archive-run.sh p01`, and
 delete `runs/p01/` and `qa-runner`'s session data. Before deleting, search the pilot's transcripts
@@ -115,33 +126,57 @@ the checklist. After the pilot passes, the design is frozen.
 
 ## For each run (in `ORDER.md` order)
 
+Take the `prepare-run.sh` line for the next run from [`results/ORDER.md`](results/ORDER.md), e.g.:
+
 ```bash
-experiments/scripts/prepare-run.sh main persistent experiment-v1 r01   # creates C:\runs\r01
-experiments/scripts/start-service.sh experiment-v1                     # separate terminal; leave it running
+experiments/scripts/prepare-run.sh main full experiment-v1 r01   # creates C:\runs\r01
+experiments/scripts/start-service.sh experiment-v1               # separate terminal; leave it running
 ```
 
-1. As `qa-runner`, in a plain terminal: `cd C:\runs\r01`, start a **new** agent session (never
-   continue or resume one) and send the printed prompt.
-2. Answer questions only from `clarification.md`; note every question.
-3. When the agent says it's done, **don't correct anything yet**. Still as `qa-runner`: save the
-   conversation with `/export` and copy the session's `.jsonl` transcript, both unedited, into
-   `C:\runs\r01\_transcript\`. Then, as you:
+1. As `qa-runner`, in a plain Git Bash window: `cd /c/runs/r01`, then `claude` — a **new** session
+   (never continue or resume one). If it offers auto mode, answer **No, keep accept edits**. Check
+   `/context` shows 17 skills (look only — never toggle anything in `/skills`). Then send the
+   printed prompt.
+2. Answer questions only from `clarification.md`; apply the approval rule; note every question and
+   every approval prompt. Screenshot (`Win+Shift+S`) every question the agent asks and its final
+   report; Windows saves them to `qa-runner`'s `Pictures\Screenshots`. In `r01` only, also
+   screenshot `/status` before sending the prompt.
+3. When the agent says it's done, **don't correct anything yet**. Still as `qa-runner`: `/export` →
+   save to file (e.g. `export.txt`), `/exit`, then move it, unedited, into `C:\runs\r01\_transcript\`
+   (`mkdir -p _transcript && mv export.txt _transcript/`), together with the run's screenshots
+   (`mv ~/Pictures/Screenshots/*.png _transcript/`). Then, as you:
    ```bash
    experiments/scripts/check-run.sh r01     # writes runs/r01/agent.diff and check-results.md
    ```
    `check-run.sh` works on a temporary copy: the run folder stays exactly as the agent left it.
 4. **Score the first result** with the rubric, the required-cases checklist and the failure-cause
-   table in [`results/TEMPLATE.md`](results/TEMPLATE.md).
+   table in [`results/TEMPLATE.md`](results/TEMPLATE.md) — now or after all runs: `agent.diff`
+   keeps the first result.
 5. **Correct** until you'd accept it in code review: one issue per message, plain language.
    Stop after 5. Answers from `clarification.md` don't count as corrections. Export the transcript
-   again afterwards (it now includes the corrections).
+   again afterwards into `_transcript/` under a new name (e.g. `export-final.txt`).
 6. Archive, then clean up:
    ```bash
    experiments/scripts/archive-run.sh r01   # copies to runs/r01/workspace/, verifies, deletes C:\runs\r01
    ```
    It copies without `node_modules/`, resets the copy's permissions, checks that only SYSTEM,
    Administrators and you have access, compares hashes, and only then deletes the original.
-   Finally, as `qa-runner`, delete its session data (for Claude Code: `C:\Users\qa-runner\.claude\projects\`).
+   Finally, as `qa-runner`, delete its session data if it exists (PowerShell:
+   `Test-Path C:\Users\qa-runner\.claude\projects`, and if `True`:
+   `Remove-Item C:\Users\qa-runner\.claude\projects -Recurse -Force`).
+
+## Invalid runs
+
+Decided before the first recorded run:
+
+- **A bad result is never a reason to discard a run.** Weak tests, missed bugs, a failing type
+  check or ignored conventions are what the experiment measures.
+- **A run is invalid only if something outside the agent broke it** and would have hit any
+  condition the same way: the service, the network, the Anthropic API or Claude Code itself failed,
+  or the operator made a mistake (wrong prepare command, wrong prompt, a toggle in `/skills`).
+- An invalid run keeps its ID and its evidence (check and archive it if possible) and gets the
+  reason in its run sheet. It is repeated with the next free ID (`r12`, …) with the same scenario
+  and condition. Every invalid run is listed in the results.
 
 ## Rubric
 

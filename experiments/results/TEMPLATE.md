@@ -12,6 +12,8 @@
 | Model ID + effort level | |
 | Ran as the agent account, fresh session, plain terminal? | yes / no |
 | Approval prompts that appeared (beyond the allow list) | |
+| Valid run? | yes / invalid — reason (see "Invalid runs" in `PROTOCOL.md`) |
+| Screenshots in `_transcript/` | questions: _ · final report: yes / no |
 
 ## Session
 

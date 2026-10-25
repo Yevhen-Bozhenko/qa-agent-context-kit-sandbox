@@ -41,6 +41,8 @@ experiments/
   scripts/                 prepare-run, start-service, check-run, archive-run, selftest-checker
   checker-selftest/        synthetic fixtures that validate the checker (not results)
   results/TEMPLATE.md      run sheet + summary tables
+  results/ORDER.md         the fixed, blocked-random run order (r01–r11)
+  results/PILOT.md         the pilot run that verified isolation and the evidence workflow
 ```
 
 ## Quick start
