@@ -1,0 +1,54 @@
+diff --git a/tests/api/bookings/create-booking-validation.spec.ts b/tests/api/bookings/create-booking-validation.spec.ts
+new file mode 100644
+index 0000000..e5b8c99
+--- /dev/null
++++ b/tests/api/bookings/create-booking-validation.spec.ts
+@@ -0,0 +1,48 @@
++import { test, expect } from '../../../src/fixtures';
++import { aBooking, type BookingBuilder } from '../../../src/data/bookings/BookingBuilder';
++import type { Booking, ErrorResponse } from '../../../src/models';
++
++type InvalidCase = { name: string; patch: (b: BookingBuilder) => BookingBuilder; field: string };
++type ValidCase = { name: string; patch: (b: BookingBuilder) => BookingBuilder };
++
++// Rules: BOOK-412 — checkIn/checkOut required; checkOut after checkIn; guests integer 1..8.
++const invalidCases: InvalidCase[] = [
++  { name: 'checkOut is before checkIn', patch: (b) => b.checkOutDaysAfterCheckIn(-1), field: 'checkOut' },
++  { name: 'checkOut equals checkIn', patch: (b) => b.checkOutDaysAfterCheckIn(0), field: 'checkOut' },
++  { name: 'guests is 0', patch: (b) => b.withGuests(0), field: 'guests' },
++  { name: 'guests is 9', patch: (b) => b.withGuests(9), field: 'guests' },
++  { name: 'checkIn is missing', patch: (b) => b.withoutCheckIn(), field: 'checkIn' },
++];
++
++const validCases: ValidCase[] = [
++  { name: 'guests is 1', patch: (b) => b.withGuests(1) },
++  { name: 'guests is 8', patch: (b) => b.withGuests(8) },
++  { name: 'checkOut is 1 day after checkIn', patch: (b) => b.checkOutDaysAfterCheckIn(1) },
++];
++
++test.describe(
++  'POST /bookings validation',
++  { tag: ['@api', '@regression'], annotation: { type: 'issue', description: 'BOOK-412' } },
++  () => {
++    for (const c of invalidCases) {
++      test(`rejects booking when ${c.name}`, async ({ bookingsClient }) => {
++        const response = await bookingsClient.create(c.patch(aBooking()).build());
++
++        expect(response.status()).toBe(400);
++        const body = (await response.json()) as ErrorResponse;
++        expect(body.code).toBe('VALIDATION_ERROR');
++        expect(body.errors.map((e) => e.field)).toEqual([c.field]);
++      });
++    }
++
++    for (const c of validCases) {
++      test(`accepts booking when ${c.name}`, async ({ bookingsClient }) => {
++        const response = await bookingsClient.create(c.patch(aBooking()).build());
++
++        expect(response.status()).toBe(201);
++        const booking = (await response.json()) as Booking;
++        await bookingsClient.delete(booking.id);
++      });
++    }
++  },
++);

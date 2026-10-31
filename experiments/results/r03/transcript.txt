@@ -1,0 +1,140 @@
+ ▐▛███▛█   Claude Code v2.1.310
+▝▜██████▀  Opus 5.5 · Claude Pro
+ ▝▝   ▝▝   C:\runs\r03
+
+
+❯ /context 
+  ⎿  Context Usage
+     ⛀ ⛁ ⛁ ⛁ ⛁ ⛁ ⛀ ⛀ ⛀ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   Opus 5.5
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   claude-opus-5-5
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   31.9k/1m tokens (3%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ 
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   Estimated usage by category
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System prompt: 2.2k tokens (0.2%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System tools: 26k tokens (2.6%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Memory files: 1k tokens (0.1%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Skills: 2.7k tokens (0.3%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝   ⛁ Messages: 10 tokens (0.0%)
+                                               ⛶ Free space: 935.1k (93.5%)
+                                               ⛝ Autocompact buffer: 33k tokens (3.3%)
+
+     Auto-compact window: 1m tokens
+
+     Memory files · /memory
+     └ 2 files · 1k tokens
+
+     Skills · /skills
+     └ 17 skills · 2.7k tokens
+
+     /context all to expand
+
+❯ Add negative tests for POST /bookings validation. The requirements are in     
+  docs/tickets/BOOK-412.md                                                      
+
+● I'll start by loading the project context and the ticket.
+
+  Searched for 1 pattern, read 13 files (ctrl+o to expand)
+
+● I've confirmed BOOK-412 covers most needs, but it doesn't specify which field
+  name should be reported when checkOut isn't after checkIn—since tests will
+  assert the exact field list, I need you to decide that before I proceed.
+
+● User answered Claude's questions:
+  ⎿  · BOOK-412 AC2: when checkOut is on or before checkIn, which field(s) 
+     should errors[] contain? → The requirements are in docs/tickets/BOOK-412.md
+     · When checkIn has a bad format (e.g. 2026/11/25) and checkOut is a valid 
+     date, which field(s) should errors[] contain? → The requirements are in 
+     docs/tickets/BOOK-412.md.
+
+● Since BOOK-412 doesn't specify which field an ordering violation is reported
+  against or how missing/malformed checkIn affects checkOut flagging, I'll only
+  assert what the ticket explicitly guarantees and use exact field lists
+  elsewhere. Next, I'll check the TS config and confirm the service is running.
+
+  Read 2 files (ctrl+o to expand)
+
+● No new builder methods are needed, since the existing with*/without* methods
+  cover every case. Writing the spec:
+
+● Write(tests\api\bookings\create-booking-validation.spec.ts)
+  ⎿  Wrote 81 lines to tests\api\bookings\create-booking-validation.spec.ts
+       1 import { test, expect } from '../../../src/fixtures';
+         /bookings/BookingBuilder';
+         ';
+       4 import type { Booking, ErrorResponse } from '../../../src/models
+       5 
+          BookingBuilder; fields: string[] };
+         ingBuilder) => BookingBuilder; mustInclude?: string };
+       8 type ValidCase = { name: string; patch: (b: BookingBuilder) => B
+       9 
+         kOut after checkIn; guests integer 1..8.
+     … +97 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I added 13 negative and boundary tests for POST /bookings from BOOK-412. They
+  all pass, but 4 of them can't check which fields the error names, because the
+  ticket doesn't say.
+
+  1. What changed
+
+  - tests/api/bookings/create-booking-validation.spec.ts (new): 10 rejection
+    tests and 3 boundary acceptance tests.
+
+  2. Reused vs. created
+
+  - Reused: the bookingsClient fixture, aBooking() and its existing
+    with*/without*/checkOutDaysAfterCheckIn methods, addDays/daysFromToday, and
+    the ErrorResponse/Booking types.
+  - Created: only the spec. The builder and client already had everything
+    needed.
+  - The spec follows create-user-validation.spec.ts: typed case tables, one
+    change per case, the @api @regression tags and the BOOK-412 annotation.
+
+  3. Commands run
+
+  - npm run typecheck: passed.
+  - npx playwright test tests/api/bookings/create-booking-validation.spec.ts 
+    --repeat-each=3: 39 passed, 0 failed (13 tests × 3 runs).
+
+  4. Coverage, assumptions and gaps
+
+  Fully checked: status 400, the VALIDATION_ERROR code and the exact list of
+  invalid fields.
+  - checkOut missing, or written as YYYY/MM/DD
+  - guests missing, 0, 9, or 2.5
+  - Each of these would fail if the rule were dropped (the API would return 201)
+    or if the error named the wrong field.
+
+  Checked without the exact field list. You pointed me back to the ticket when I
+  asked, but it doesn't settle these:
+  - checkOut on the check-in day, or before checkIn: AC2 doesn't say which field
+    the error should name. The tests check 400, the code, and that at least one
+    field is named.
+  - checkIn missing or malformed: the ticket doesn't say whether checkOut should
+    also be named when the dates can't be compared. The tests check that
+    checkIn is named but don't require the list to be exactly ['checkIn'].
+
+  This goes against the project rule of always checking the exact field list,
+  but writing an exact list here would mean inventing a requirement. A comment
+  in the spec marks where to tighten these once BOOK-412 says which field(s) are
+  expected. This is worth raising with whoever owns the ticket.
+
+  Boundary acceptance: guests of 1 and 8, and a one-night stay, all return 201.
+  Each test then deletes the booking it created, the same way the users
+  reference test does.
+
+  Assumptions:
+  - I used YYYY/MM/DD as the "wrong format" example. I didn't test values that
+    match the pattern but aren't real dates, such as Feb 30.
+  - I didn't test a non-number guests (e.g. "2"), because the builder only
+    accepts numbers.
+
+  5. Suggested additions to .ai/qa-context.md
+
+  - A rule for which field a rule involving two fields is reported against, such
+    as date ordering.
+  - Whether a field is also reported when it's valid on its own but can't be
+    checked because the field it depends on is invalid.
+
+✻ Cooked for 1m 18s · done 3:39 PM

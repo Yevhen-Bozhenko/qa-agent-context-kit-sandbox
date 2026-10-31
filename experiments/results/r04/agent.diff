@@ -1,0 +1,100 @@
+diff --git a/docs/tickets/BOOK-412.md b/docs/tickets/BOOK-412.md
+new file mode 100644
+index 0000000..c457b34
+--- /dev/null
++++ b/docs/tickets/BOOK-412.md
+@@ -0,0 +1,12 @@
++# BOOK-412 — Validate new bookings
++
++**Type:** Story
++
++## Acceptance criteria
++
++1. `checkIn` and `checkOut` are required and must be dates in `YYYY-MM-DD` format.
++2. `checkOut` must be after `checkIn` (same day is invalid).
++3. `guests` is required and must be an integer from 1 to 8 inclusive.
++4. When a request violates any rule, the API responds `400` with
++   `{ "code": "VALIDATION_ERROR", "errors": [{ "field", "message" }] }`, where `errors` lists exactly
++   the fields that are invalid.
+diff --git a/tests/api/bookings/create-booking-validation.spec.ts b/tests/api/bookings/create-booking-validation.spec.ts
+new file mode 100644
+index 0000000..26385c5
+--- /dev/null
++++ b/tests/api/bookings/create-booking-validation.spec.ts
+@@ -0,0 +1,76 @@
++import { test, expect } from '../../../src/fixtures';
++import { aBooking, type BookingBuilder } from '../../../src/data/bookings/BookingBuilder';
++import { daysFromToday } from '../../../src/utils/dates';
++import type { Booking, ErrorResponse } from '../../../src/models';
++
++type InvalidCase = { name: string; patch: (b: BookingBuilder) => BookingBuilder; field: string };
++
++const slashSeparated = (isoDate: string): string => isoDate.replace(/-/g, '/');
++const dayFirst = (isoDate: string): string => isoDate.split('-').reverse().join('-');
++
++// Badly formatted dates still point to a day that keeps checkIn before checkOut
++// (builder default: checkIn today+30, checkOut today+33), so only the format rule is broken.
++const earlyDate = daysFromToday(0);
++const lateDate = daysFromToday(60);
++
++// Rules: BOOK-412 — checkIn/checkOut required, YYYY-MM-DD; checkOut after checkIn;
++// guests required, integer 1..8.
++const invalidCases: InvalidCase[] = [
++  { name: 'checkIn is missing', patch: (b) => b.withoutCheckIn(), field: 'checkIn' },
++  { name: 'checkIn uses slashes', patch: (b) => b.withCheckIn(slashSeparated(earlyDate)), field: 'checkIn' },
++  { name: 'checkIn is day-first', patch: (b) => b.withCheckIn(dayFirst(earlyDate)), field: 'checkIn' },
++  { name: 'checkOut is missing', patch: (b) => b.withoutCheckOut(), field: 'checkOut' },
++  { name: 'checkOut uses slashes', patch: (b) => b.withCheckOut(slashSeparated(lateDate)), field: 'checkOut' },
++  { name: 'checkOut is day-first', patch: (b) => b.withCheckOut(dayFirst(lateDate)), field: 'checkOut' },
++  { name: 'checkOut is the same day as checkIn', patch: (b) => b.checkOutDaysAfterCheckIn(0), field: 'checkOut' },
++  { name: 'checkOut is before checkIn', patch: (b) => b.checkOutDaysAfterCheckIn(-1), field: 'checkOut' },
++  { name: 'guests is missing', patch: (b) => b.withoutGuests(), field: 'guests' },
++  { name: 'guests is 0', patch: (b) => b.withGuests(0), field: 'guests' },
++  { name: 'guests is 9', patch: (b) => b.withGuests(9), field: 'guests' },
++  { name: 'guests is not an integer', patch: (b) => b.withGuests(2.5), field: 'guests' },
++];
++
++type ValidCase = { name: string; patch: (b: BookingBuilder) => BookingBuilder };
++
++const boundaryCases: ValidCase[] = [
++  { name: 'checkOut is one day after checkIn', patch: (b) => b.checkOutDaysAfterCheckIn(1) },
++  { name: 'guests is 1', patch: (b) => b.withGuests(1) },
++  { name: 'guests is 8', patch: (b) => b.withGuests(8) },
++];
++
++test.describe(
++  'POST /bookings validation',
++  { tag: ['@api', '@regression'], annotation: { type: 'issue', description: 'BOOK-412' } },
++  () => {
++    for (const c of invalidCases) {
++      test(`rejects booking when ${c.name}`, async ({ bookingsClient }) => {
++        const response = await bookingsClient.create(c.patch(aBooking()).build());
++
++        expect(response.status()).toBe(400);
++        const body = (await response.json()) as ErrorResponse;
++        expect(body.code).toBe('VALIDATION_ERROR');
++        expect(body.errors.map((e) => e.field)).toEqual([c.field]);
++      });
++    }
++
++    test('rejects booking when several fields are invalid', async ({ bookingsClient }) => {
++      const response = await bookingsClient.create(aBooking().withoutCheckOut().withGuests(9).build());
++
++      expect(response.status()).toBe(400);
++      const body = (await response.json()) as ErrorResponse;
++      expect(body.code).toBe('VALIDATION_ERROR');
++      // BOOK-412 does not define the order of errors, only which fields are listed.
++      expect(body.errors.map((e) => e.field).sort()).toEqual(['checkOut', 'guests']);
++    });
++
++    for (const c of boundaryCases) {
++      test(`accepts booking when ${c.name}`, async ({ bookingsClient }) => {
++        const response = await bookingsClient.create(c.patch(aBooking()).build());
++
++        expect(response.status()).toBe(201);
++        const booking = (await response.json()) as Booking;
++        await bookingsClient.delete(booking.id);
++      });
++    }
++  },
++);

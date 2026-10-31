@@ -1,0 +1,127 @@
+ ▐▛███▛█   Claude Code v2.1.310
+▝▜██████▀  Opus 5.5 · Claude Pro
+ ▝▝   ▝▝   C:\runs\r10
+
+
+❯ /context 
+  ⎿  Context Usage
+     ⛀ ⛁ ⛁ ⛁ ⛁ ⛁ ⛀ ⛀ ⛀ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   Opus 5.5
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   claude-opus-5-5
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   31.9k/1m tokens (3%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ 
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   Estimated usage by category
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System prompt: 2.2k tokens (0.2%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System tools: 26k tokens (2.6%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Memory files: 1k tokens (0.1%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Skills: 2.7k tokens (0.3%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝   ⛁ Messages: 10 tokens (0.0%)
+                                               ⛶ Free space: 935.1k (93.5%)
+                                               ⛝ Autocompact buffer: 33k tokens (3.3%)
+
+     Auto-compact window: 1m tokens
+
+     Memory files · /memory
+     └ 2 files · 1k tokens
+
+     Skills · /skills
+     └ 17 skills · 2.7k tokens
+
+     /context all to expand
+
+❯ Add negative tests for POST /bookings validation. The requirements are in     
+  docs/tickets/BOOK-412.md.                                                     
+
+● I'll start by loading the project context and the ticket.
+
+  Searched for 1 pattern, read 15 files (ctrl+o to expand)
+
+● I've confirmed the acceptance criteria, validation spec, and builder methods
+  are all in place with nothing missing. Now I'll write the spec.
+
+● Write(tests\api\bookings\create-booking-validation.spec.ts)
+  ⎿  Wrote 74 lines to tests\api\bookings\create-booking-validation.spec.ts
+       1 import { test, expect } from '../../../src/fixtures';
+         /bookings/BookingBuilder';
+       3 import { daysFromToday } from '../../../src/utils/dates';
+         ';
+       5 
+          BookingBuilder; field: string };
+       7 type BoundaryCase = { name: string; patch: (b: BookingBuilder) =
+       8 
+       9 // Same calendar date as the builder default, but not in YYYY-MM
+      10 const slashFormatted = daysFromToday(30).replaceAll('-', '/');
+     … +92 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I added the negative tests for POST /bookings validation from BOOK-412, plus
+  the boundary tests that go with them. All 16 tests pass and npm run typecheck
+  is clean.
+
+  1. What changed
+
+  - tests/api/bookings/create-booking-validation.spec.ts (new): 13 rejection
+    tests and 3 boundary acceptance tests.
+
+  ┌───────────────────┬──────────────────────────────────────┬──────────────┐
+  │        AC         │            Rejected (400)            │  Accepted    │
+  │                   │                                      │    (201)     │
+  ├───────────────────┼──────────────────────────────────────┼──────────────┤
+  │ 1. Dates          │ checkIn / checkOut missing; each one │              │
+  │ required,         │  written with slashes (YYYY/MM/DD)   │ —            │
+  │ YYYY-MM-DD        │ or day-first (DD-MM-YYYY)            │              │
+  ├───────────────────┼──────────────────────────────────────┼──────────────┤
+  │ 2. checkOut after │ check-out on the check-in day,       │ check-out 1  │
+  │  checkIn          │ check-out the day before             │ day after    │
+  ├───────────────────┼──────────────────────────────────────┼──────────────┤
+  │ 3. guests integer │ missing, 0, 9, 2.5                   │ 1, 8         │
+  │  1–8              │                                      │              │
+  ├───────────────────┼──────────────────────────────────────┼──────────────┤
+  │ 4. One error      │ checkOut and guests both invalid →   │              │
+  │ entry per invalid │ both fields listed                   │ —            │
+  │  field            │                                      │              │
+  └───────────────────┴──────────────────────────────────────┴──────────────┘
+
+  Each rejection test checks the status (400), the error code (VALIDATION_ERROR)
+  and the exact list of errors[].field. Each test would fail if its rule were
+  broken: a 201 response, a different code, or a missing or extra field entry
+  all fail it.
+
+  2. Reused vs. created
+
+  - Reused: the bookingsClient fixture, aBooking() and its existing methods
+    (withoutX, withX, checkOutDaysAfterCheckIn), daysFromToday from
+    src/utils/dates.ts, and the ErrorResponse and Booking models. The spec
+    follows the same structure as create-user-validation.spec.ts.
+  - Created: nothing besides the spec. No framework changes were needed.
+
+  3. Commands run
+
+  - npm run typecheck: passed.
+  - npx playwright test tests/api/bookings/create-booking-validation.spec.ts 
+    --repeat-each=3: 48 passed, 0 failed, so every test passed 3 times.
+
+  4. Assumptions and things not verified
+
+  - Which field is blamed for a bad date order: I expect the error on checkOut,
+    because AC2 is worded as a rule about checkOut. The ticket doesn't say this
+    outright, so please confirm.
+  - A badly formatted checkIn with a valid checkOut: I expect only checkIn in
+    the errors, since AC4 says to list exactly the invalid fields.
+  - Order of errors in the two-field test: the ticket doesn't say what order
+    they come in, so that test sorts the field names before comparing. It still
+    checks the exact set and count.
+  - Not covered, because the ticket doesn't settle them:
+    - Calendar-impossible dates like 2026-02-30. They match the format, but it's
+      unclear whether they count as "dates".
+    - guests sent as a string. CreateBookingRequest.guests is typed number, so
+      the builder can't send one without a model change.
+    - Past check-in dates. The ticket has no rule on them.
+
+  5. Suggested additions to .ai/qa-context.md
+
+  - A line saying which field a rule that involves two fields (like check-out
+    after check-in) is reported on.
+  - Whether the order of errors[] is part of the contract.
+
+✻ Brewed for 56s · done 9:17 PM

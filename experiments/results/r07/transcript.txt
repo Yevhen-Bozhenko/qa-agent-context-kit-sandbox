@@ -1,0 +1,104 @@
+ ▐▛███▛█   Claude Code v2.1.310
+▝▜██████▀  Opus 5.5 · Claude Pro
+ ▝▝   ▝▝   C:\runs\r07
+
+
+❯ /context 
+  ⎿  Context Usage
+     ⛀ ⛁ ⛁ ⛁ ⛁ ⛁ ⛀ ⛀ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   Opus 5.5
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   claude-opus-5-5
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   30.9k/1m tokens (3%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ 
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   Estimated usage by category
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System prompt: 2.2k tokens (0.2%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System tools: 26k tokens (2.6%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Skills: 2.7k tokens (0.3%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Messages: 10 tokens (0.0%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝   ⛶ Free space: 936.1k (93.6%)
+                                               ⛝ Autocompact buffer: 33k tokens (3.3%)
+
+     Auto-compact window: 1m tokens
+
+     Skills · /skills
+     └ 17 skills · 2.7k tokens
+
+     /context all to expand
+
+❯ Add negative tests for POST /bookings validation. The requirementsare are in  
+  docs/tickets/BOOK-412.md.                                                     
+
+  Read 1 file, ran 2 shell commands (ctrl+o to expand)
+
+● Write(tests\api\bookings\create-booking-validation.spec.ts)
+  ⎿  Wrote 61 lines to tests\api\bookings\create-booking-validation.spec.ts
+       1 import { test, expect } from '../../../src/fixtures';
+         /bookings/BookingBuilder';
+       3 import { daysFromToday } from '../../../src/utils/dates';
+       4 import type { Booking, ErrorResponse } from '../../../src/models
+       5 
+       6 type InvalidCase = { name: string; patch: (b: BookingBuilder) =>
+       7 
+       8 // Rules: BOOK-412 — checkIn/checkOut required, YYYY-MM-DD, chec
+         kOut after checkIn;
+      10 const invalidCases: InvalidCase[] = [
+     … +74 lines (ctrl+o to expand)
+
+● Update(tests\api\bookings\create-booking-validation.spec.ts)
+  ⎿  Added 1 line, removed 1 line
+      45      const boundaryCases: { name: string; patch: (b: BookingBuil
+          der) => BookingBuilder }[] = [
+      46        { name: '1 guest', patch: (b) => b.withGuests(1) },
+      47        { name: '8 guests', patch: (b) => b.withGuests(8) },
+      48 -      { name: 'checkOut one day after checkIn', patch: (b) => b
+         -.withCheckIn(daysFromToday(30)).checkOutDaysAfterCheckIn(1) }, 
+      48 +      { name: 'checkOut one day after checkIn', patch: (b) => b
+         +.checkOutDaysAfterCheckIn(1) },                                
+      49      ];
+      50  
+      51      for (const c of boundaryCases) {
+
+● Update(tests\api\bookings\create-booking-validation.spec.ts)
+  ⎿  Removed 1 line
+      1  import { test, expect } from '../../../src/fixtures';
+      2  import { aBooking, type BookingBuilder } from '../../../src/data
+         /bookings/BookingBuilder';
+      3 -import { daysFromToday } from '../../../src/utils/dates';       
+      3  import type { Booking, ErrorResponse } from '../../../src/models
+         ';
+      4  
+      5  type InvalidCase = { name: string; patch: (b: BookingBuilder) =>
+          BookingBuilder; fields: string[] };
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I added tests/api/bookings/create-booking-validation.spec.ts, which follows
+  the same pattern as the existing users validation spec. The typecheck passes
+  and all 15 tests pass against the running service on localhost:4010. I haven't
+  committed anything.
+
+  Rejected with 400 (12 cases) — each one checks code is VALIDATION_ERROR and
+  that errors lists exactly the invalid fields:
+  - Missing fields: checkIn, checkOut and guests, one at a time.
+  - Wrong date format: checkIn as 01/12/2030, and checkOut as 2030-12-1.
+  - Bad date order: check-out on the check-in day, and check-out the day before
+    check-in.
+  - Bad guest counts: guests of 0, 9, -1 and 2.5.
+  - Two bad fields at once: checkIn and guests together, which tests the "one
+    entry per invalid field" rule.
+
+  Accepted with 201 (3 cases): 1 guest, 8 guests, and a one-night stay. These
+  are the edges just inside each limit, so a bug like using < where <= belongs
+  would show up. Each one deletes the booking it creates. They aren't negative
+  tests, so remove them if you only want rejections.
+
+  Decisions to check:
+  - Which field the date-order error names: the ticket doesn't say. The tests
+    expect it on checkOut, and the service does that today.
+  - Order of errors: the ticket doesn't specify one either, so the tests sort
+    the field names before comparing.
+  - Not covered: dates that are correctly formatted but don't exist, like
+    2030-02-30, and guests sent as a string. The ticket doesn't clearly say
+    whether the first should be rejected. The second would mean getting around
+    the request type, since it only allows a number for guests.
+
+✻ Sautéed for 39s · done 7:50 PM

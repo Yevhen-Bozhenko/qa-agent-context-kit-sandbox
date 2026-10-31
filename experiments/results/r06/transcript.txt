@@ -1,0 +1,107 @@
+ ▐▛███▛█   Claude Code v2.1.310
+▝▜██████▀  Opus 5.5 · Claude Pro
+ ▝▝   ▝▝   C:\runs\r06
+
+
+❯ Add negative tests for POST /bookings validation. The requirements are in     
+  docs/tickets/BOOK-412.md.                                                     
+
+● I'll start by loading the required project context.
+
+  Read 12 files, ran 1 shell command (ctrl+o to expand)
+
+● I have everything needed: the ticket with ACs, a reference validation spec, a
+  complete builder, and the client. Now I'll verify the service is running
+  before proceeding.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The service is up. Writing the spec now. All the builder methods I need
+  already exist, so no framework changes are required.
+
+● Write(tests\api\bookings\create-booking-validation.spec.ts)
+  ⎿  Wrote 78 lines to tests\api\bookings\create-booking-validation.spec.ts
+       1 import { test, expect } from '../../../src/fixtures';
+         /bookings/BookingBuilder';
+       3 import type { Booking, ErrorResponse } from '../../../src/models
+       4 import { daysFromToday } from '../../../src/utils/dates';
+       5 
+          BookingBuilder; field: string };
+       7 type ValidCase = { name: string; patch: (b: BookingBuilder) => B
+       8 
+       9 // Rules: BOOK-412 — checkIn/checkOut required, YYYY-MM-DD; chec
+      10 // guests required, integer 1–8 inclusive.
+     … +92 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I added 16 tests for POST /bookings validation, covering BOOK-412. All 16
+  passed in each of 3 runs, and the type check passes.
+
+  1. What changed
+
+  - tests/api/bookings/create-booking-validation.spec.ts (new): tests for each
+    acceptance criterion in BOOK-412, plus tests for the accepted values next to
+    each limit.
+
+  ┌──────────────────┬──────────────────────────────────┬──────────────────┐
+  │                  │     Rejected (expect 400 +       │ Accepted (expect │
+  │    BOOK-412      │  VALIDATION_ERROR + the exact    │    201, then     │
+  │    criterion     │       errors[].field list)       │   delete the     │
+  │                  │                                  │     booking)     │
+  ├──────────────────┼──────────────────────────────────┼──────────────────┤
+  │ 1. Dates         │ checkIn / checkOut each:         │                  │
+  │ required, in     │ missing, given as a full         │ –                │
+  │ YYYY-MM-DD       │ timestamp (…T00:00:00Z), not a   │                  │
+  │ format           │ date                             │                  │
+  ├──────────────────┼──────────────────────────────────┼──────────────────┤
+  │ 2. checkOut      │ same day, day before             │ day after        │
+  │ after checkIn    │                                  │                  │
+  ├──────────────────┼──────────────────────────────────┼──────────────────┤
+  │ 3. guests a      │                                  │                  │
+  │ whole number     │ missing, 0, 9, 2.5               │ 1, 8             │
+  │ from 1 to 8      │                                  │                  │
+  ├──────────────────┼──────────────────────────────────┼──────────────────┤
+  │ 4. One error     │ checkIn missing + guests 9 →     │                  │
+  │ entry per        │ ['checkIn', 'guests']            │ –                │
+  │ invalid field    │                                  │                  │
+  └──────────────────┴──────────────────────────────────┴──────────────────┘
+
+  Each negative test would fail if the rule stopped being enforced: the API
+  would return 201 instead of 400, or report a different set of fields.
+
+  2. Reused vs. new
+
+  - Reused: the bookingsClient fixture, BookingsClient.create/delete, aBooking()
+    and its existing methods (withoutX, withCheckIn/Out,
+    checkOutDaysAfterCheckIn, withGuests), daysFromToday, and the
+    ErrorResponse/Booking types. The layout follows
+    create-user-validation.spec.ts.
+  - New: only the spec file. No framework changes were needed.
+
+  3. Commands run
+
+  - npm run typecheck: passed.
+  - npx playwright test tests/api/bookings/create-booking-validation.spec.ts, 3
+    times: 16 passed, 0 failed each time.
+
+  4. Assumptions to confirm
+
+  - Which field a date-order error is reported under: I assert checkOut, because
+    the ticket says "checkOut must be after checkIn". The ticket doesn't name
+    the field explicitly.
+  - Error order in the multi-field test: the ticket doesn't say what order
+    errors come in, so that test sorts the field list before comparing. It still
+    checks that exactly those two fields are listed, each once.
+  - Not covered: impossible calendar dates (e.g. 2026-02-30) and non-number
+    guests (e.g. "2"). The builder only accepts a number for guests, and the
+    ticket doesn't say how impossible dates should be handled.
+
+  5. Suggested additions to .ai/qa-context.md
+
+  - State how the field is chosen for errors that involve two fields (like the
+    date-order rule), and whether errors has a guaranteed order.
+
+  I haven't committed anything.
+
+✻ Baked for 53s · done 7:13 PM

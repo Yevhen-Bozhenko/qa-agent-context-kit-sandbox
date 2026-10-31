@@ -1,0 +1,84 @@
+diff --git a/tests/api/bookings/create-booking-validation.spec.ts b/tests/api/bookings/create-booking-validation.spec.ts
+new file mode 100644
+index 0000000..14af18c
+--- /dev/null
++++ b/tests/api/bookings/create-booking-validation.spec.ts
+@@ -0,0 +1,78 @@
++import { test, expect } from '../../../src/fixtures';
++import { aBooking, type BookingBuilder } from '../../../src/data/bookings/BookingBuilder';
++import { daysFromToday } from '../../../src/utils/dates';
++import type { Booking, ErrorResponse } from '../../../src/models';
++
++type InvalidCase = {
++  name: string;
++  patch: (b: BookingBuilder) => BookingBuilder;
++  fields: string[];
++  /** Marks the case as an expected failure while the API has a known defect. */
++  knownBug?: string;
++};
++
++// Same day as the builder's default checkIn, but written as DD/MM/YYYY instead of YYYY-MM-DD.
++const wrongFormat = (isoDate: string): string => isoDate.split('-').reverse().join('/');
++
++// Rules: BOOK-412 — checkIn/checkOut required, YYYY-MM-DD, checkOut after checkIn; guests required, integer 1–8.
++const invalidCases: InvalidCase[] = [
++  { name: 'checkIn is missing', patch: (b) => b.withoutCheckIn(), fields: ['checkIn'] },
++  { name: 'checkIn is not YYYY-MM-DD', patch: (b) => b.withCheckIn(wrongFormat(daysFromToday(30))), fields: ['checkIn'] },
++  { name: 'checkOut is missing', patch: (b) => b.withoutCheckOut(), fields: ['checkOut'] },
++  { name: 'checkOut is not YYYY-MM-DD', patch: (b) => b.withCheckOut(wrongFormat(daysFromToday(33))), fields: ['checkOut'] },
++  {
++    name: 'checkOut is not a real date',
++    patch: (b) => b.withCheckOut('2030-02-30'),
++    fields: ['checkOut'],
++    knownBug: 'API accepts impossible calendar dates such as 2030-02-30 with 201 (found 2026-10-26)',
++  },
++  { name: 'checkOut is the check-in day', patch: (b) => b.checkOutDaysAfterCheckIn(0), fields: ['checkOut'] },
++  { name: 'checkOut is before checkIn', patch: (b) => b.checkOutDaysAfterCheckIn(-1), fields: ['checkOut'] },
++  { name: 'guests is missing', patch: (b) => b.withoutGuests(), fields: ['guests'] },
++  { name: 'guests is 0', patch: (b) => b.withGuests(0), fields: ['guests'] },
++  { name: 'guests is 9', patch: (b) => b.withGuests(9), fields: ['guests'] },
++  { name: 'guests is not an integer', patch: (b) => b.withGuests(2.5), fields: ['guests'] },
++  {
++    name: 'checkIn is missing and guests is 0',
++    patch: (b) => b.withoutCheckIn().withGuests(0),
++    fields: ['checkIn', 'guests'],
++  },
++];
++
++test.describe(
++  'POST /bookings validation',
++  { tag: ['@api', '@regression'], annotation: { type: 'issue', description: 'BOOK-412' } },
++  () => {
++    for (const c of invalidCases) {
++      test(`rejects booking when ${c.name}`, async ({ bookingsClient }) => {
++        test.fail(c.knownBug !== undefined, c.knownBug);
++        const response = await bookingsClient.create(c.patch(aBooking()).build());
++
++        // Don't leave data behind if the API wrongly accepts the booking.
++        if (response.status() === 201) {
++          await bookingsClient.delete(((await response.json()) as Booking).id);
++        }
++        expect(response.status()).toBe(400);
++        const body = (await response.json()) as ErrorResponse;
++        expect(body.code).toBe('VALIDATION_ERROR');
++        expect(body.errors.map((e) => e.field).sort()).toEqual([...c.fields].sort());
++      });
++    }
++
++    const validBoundaries: { name: string; patch: (b: BookingBuilder) => BookingBuilder }[] = [
++      { name: '1 guest', patch: (b) => b.withGuests(1) },
++      { name: '8 guests', patch: (b) => b.withGuests(8) },
++      { name: 'checkOut one day after checkIn', patch: (b) => b.checkOutDaysAfterCheckIn(1) },
++    ];
++
++    for (const c of validBoundaries) {
++      test(`accepts booking with ${c.name}`, async ({ bookingsClient }) => {
++        const response = await bookingsClient.create(c.patch(aBooking()).build());
++
++        expect(response.status()).toBe(201);
++        const booking = (await response.json()) as Booking;
++        await bookingsClient.delete(booking.id);
++      });
++    }
++  },
++);

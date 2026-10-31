@@ -43,6 +43,8 @@ experiments/
   results/TEMPLATE.md      run sheet + summary tables
   results/ORDER.md         the fixed, blocked-random run order (r01–r11)
   results/PILOT.md         the pilot run that verified isolation and the evidence workflow
+  results/SUMMARY.md       recorded results of r01–r11: tables, findings, limits, deviations
+  results/rNN/             per-run evidence: transcript, diff, automated checks, run sheet
 ```
 
 ## Quick start
@@ -91,8 +93,16 @@ that prove the requirement.
 
 ## Results
 
-Recorded runs go in [`experiments/results/`](experiments/results/) and are summarised in the
-kit's [comparison](https://github.com/Yevhen-Bozhenko/qa-agent-context-kit/blob/main/docs/comparison.md#recorded-results).
+All 11 runs of `experiment-v1` are recorded: **[experiments/results/SUMMARY.md](experiments/results/SUMMARY.md)**
+has the per-run tables, findings, limits and deviations; each `experiments/results/rNN/` folder holds that
+run's transcript, diff, automated checks and run sheet. The kit's
+[comparison](https://github.com/Yevhen-Bozhenko/qa-agent-context-kit/blob/main/docs/comparison.md#recorded-results)
+summarises them.
+
+In short: scores hit a ceiling in every condition (8/8 required cases, 10 of 11 runs caught all 3 bugs).
+The differences are in behaviour: the full pattern produced the same 8 tests in every run, and with
+persistent context the agent asked or flagged an assumption where the ticket was silent, instead of
+copying the service's current behaviour.
 
 ## License
 

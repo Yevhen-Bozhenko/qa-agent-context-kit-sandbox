@@ -1,0 +1,244 @@
+ ▐▛███▛█   Claude Code v2.1.310
+▝▜██████▀  Opus 5.5 · Claude Pro
+ ▝▝   ▝▝   C:\runs\r08
+
+
+❯ /context 
+  ⎿  Context Usage
+     ⛀ ⛁ ⛁ ⛁ ⛁ ⛁ ⛀ ⛀ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   Opus 5.5
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   claude-opus-5-5
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   30.9k/1m tokens (3%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ 
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   Estimated usage by category
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System prompt: 2.2k tokens (0.2%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System tools: 26k tokens (2.6%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Skills: 2.7k tokens (0.3%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Messages: 10 tokens (0.0%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝   ⛶ Free space: 936.1k (93.6%)
+                                               ⛝ Autocompact buffer: 33k tokens (3.3%)
+
+     Auto-compact window: 1m tokens
+
+     Skills · /skills
+     └ 17 skills · 2.7k tokens
+
+     /context all to expand
+
+❯ Add negative tests for POST /bookings validation.                             
+
+  Ran 3 shell commands (ctrl+o to expand)
+
+● Write(tests\api\bookings\create-booking-validation.spec.ts)
+  ⎿  Wrote 29 lines to tests\api\bookings\create-booking-validation.spec.ts
+       1 import { test, expect } from '../../../src/fixtures';
+         /bookings/BookingBuilder';
+       3 import type { ErrorResponse } from '../../../src/models';
+       5 type InvalidCase = { name: string; patch: (b: BookingBuilder) =>
+          BookingBuilder; field: string };
+       7 // Rules: docs/openapi.yaml CreateBookingRequest — checkIn, chec
+         kOut, guests required;
+         .
+       9 const invalidCases: InvalidCase[] = [
+         , field: 'checkIn' },
+     … +31 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I added tests/api/bookings/create-booking-validation.spec.ts with six negative
+  tests for POST /bookings. All six pass against the local service and the
+  typecheck is clean.
+
+  The tests follow the same pattern as the existing users validation spec. Each
+  one sends a request with one invalid field and expects a 400 with code: 
+  "VALIDATION_ERROR", with only that field listed in errors.
+
+  ┌──────────────────────────────────────┬──────────┐
+  │                 Case                 │  Field   │
+  ├──────────────────────────────────────┼──────────┤
+  │ checkIn missing                      │ checkIn  │
+  ├──────────────────────────────────────┼──────────┤
+  │ checkOut missing                     │ checkOut │
+  ├──────────────────────────────────────┼──────────┤
+  │ guests missing                       │ guests   │
+  ├──────────────────────────────────────┼──────────┤
+  │ checkIn is not a date ("not-a-date") │ checkIn  │
+  ├──────────────────────────────────────┼──────────┤
+  │ checkOut is not a date               │ checkOut │
+  ├──────────────────────────────────────┼──────────┤
+  │ guests is not a whole number (2.5)   │ guests   │
+  └──────────────────────────────────────┴──────────┘
+
+  Rules I didn't test: I only covered what docs/openapi.yaml actually defines.
+  The booking builder hints at other rules (checkOutDaysAfterCheckIn(0 | -1)),
+  but there's no ticket like USR-101 for bookings, so I didn't write tests for:
+  - checkOut on the same day as or before checkIn
+  - checkIn in the past
+  - guests of 0, negative, or above some maximum
+
+  If you can point me to where those rules are written down, or confirm what
+  they should be, I'll add tests for them along with the accepted-value cases at
+  each limit.
+
+✻ Cogitated for 45s · done 8:09 PM
+
+❯ The rules are in ticket BOOK-412: checkIn, checkOut: required, date in        
+  YYYY-MM-DD format; checkOut must be after checkIn (same day is invalid);      
+  guests are required, integer from 1 to 8 inclusive; on violation: 400 with {  
+  "code": "VALIDATION_ERROR", "errors": [{ "field", "message" }] }, where       
+  errors lists exactly the fields that are invalid.                             
+
+● Write(tests\api\bookings\create-booking-validation.spec.ts)
+  ⎿  Added 53 lines, removed 21 lines
+       1  import { test, expect } from '../../../src/fixtures';
+       2  import { aBooking, type BookingBuilder } from '../../../src/dat
+          a/bookings/BookingBuilder';
+       3 -import type { ErrorResponse } from '../../../src/models';      
+       3 +import type { Booking, ErrorResponse } from '../../../src/model
+         +s';                                                            
+       4  
+       5 -type InvalidCase = { name: string; patch: (b: BookingBuilder) =
+         -> BookingBuilder; field: string };                             
+       5 +type InvalidCase = { name: string; patch: (b: BookingBuilder) =
+         +> BookingBuilder; fields: string[] };                          
+       6 +type ValidCase = { name: string; patch: (b: BookingBuilder) => 
+         +BookingBuilder };                                              
+       7  
+       7 -// Rules: docs/openapi.yaml CreateBookingRequest — checkIn, che
+         -ckOut, guests required;                                        
+       8 -// checkIn/checkOut are dates (YYYY-MM-DD); guests is an intege
+         -r.                                                             
+       8 +// Rules: BOOK-412 — checkIn, checkOut required, YYYY-MM-DD; ch
+         +eckOut after checkIn (same day invalid);                       
+       9 +// guests required, integer 1–8 inclusive; errors lists exactly
+         + the invalid fields.                                           
+      10  const invalidCases: InvalidCase[] = [
+      10 -  { name: 'checkIn is missing', patch: (b) => b.withoutCheckIn(
+         -), field: 'checkIn' },                                         
+      11 -  { name: 'checkOut is missing', patch: (b) => b.withoutCheckOu
+         -t(), field: 'checkOut' },                                      
+      12 -  { name: 'guests is missing', patch: (b) => b.withoutGuests(),
+         - field: 'guests' },                                            
+      13 -  { name: 'checkIn is not a date', patch: (b) => b.withCheckIn(
+         -'not-a-date'), field: 'checkIn' },                             
+      14 -  { name: 'checkOut is not a date', patch: (b) => b.withCheckOu
+         -t('not-a-date'), field: 'checkOut' },                          
+      15 -  { name: 'guests is not an integer', patch: (b) => b.withGuest
+         -s(2.5), field: 'guests' },                                     
+      11 +  { name: 'checkIn is missing', patch: (b) => b.withoutCheckIn(
+         +), fields: ['checkIn'] },                                      
+      12 +  { name: 'checkOut is missing', patch: (b) => b.withoutCheckOu
+         +t(), fields: ['checkOut'] },                                   
+      13 +  { name: 'guests is missing', patch: (b) => b.withoutGuests(),
+         + fields: ['guests'] },                                         
+      14 +  { name: 'checkIn is not a date', patch: (b) => b.withCheckIn(
+         +'not-a-date'), fields: ['checkIn'] },                          
+      15 +  { name: 'checkOut is not a date', patch: (b) => b.withCheckOu
+         +t('not-a-date'), fields: ['checkOut'] },                       
+      16 +  { name: 'checkIn is not YYYY-MM-DD', patch: (b) => b.withChec
+         +kIn('12/01/2030'), fields: ['checkIn'] },                      
+      17 +  { name: 'checkOut is not YYYY-MM-DD', patch: (b) => b.withChe
+         +ckOut('2030/12/04'), fields: ['checkOut'] },                   
+      18 +  { name: 'checkOut is the same day as checkIn', patch: (b) => 
+         +b.checkOutDaysAfterCheckIn(0), fields: ['checkOut'] },         
+      19 +  { name: 'checkOut is before checkIn', patch: (b) => b.checkOu
+         +tDaysAfterCheckIn(-1), fields: ['checkOut'] },                 
+      20 +  { name: 'guests is 0', patch: (b) => b.withGuests(0), fields:
+         + ['guests'] },                                                 
+      21 +  { name: 'guests is 9', patch: (b) => b.withGuests(9), fields:
+         + ['guests'] },                                                 
+      22 +  { name: 'guests is not an integer', patch: (b) => b.withGuest
+         +s(2.5), fields: ['guests'] },                                  
+      23 +  {                                                            
+      24 +    name: 'checkIn is missing and guests is 9',                
+      25 +    patch: (b) => b.withoutCheckIn().withGuests(9),            
+      26 +    fields: ['checkIn', 'guests'],                             
+      27 +  },                                                           
+      28  ];
+      29  
+      18 -test.describe('POST /bookings validation', { tag: ['@api', '@re
+         -gression'] }, () => {                                          
+      19 -  for (const c of invalidCases) {                              
+      20 -    test(`rejects booking when ${c.name}`, async ({ bookingsCli
+         -ent }) => {                                                    
+      21 -      const response = await bookingsClient.create(c.patch(aBoo
+         -king()).build());                                              
+      30 +const validCases: ValidCase[] = [                              
+      31 +  { name: 'checkOut is the day after checkIn', patch: (b) => b.
+         +checkOutDaysAfterCheckIn(1) },                                 
+      32 +  { name: 'guests is 1', patch: (b) => b.withGuests(1) },      
+      33 +  { name: 'guests is 8', patch: (b) => b.withGuests(8) },      
+      34 +];                                                             
+      35  
+      23 -      expect(response.status()).toBe(400);                     
+      24 -      const body = (await response.json()) as ErrorResponse;   
+      25 -      expect(body.code).toBe('VALIDATION_ERROR');              
+      26 -      expect(body.errors.map((e) => e.field)).toEqual([c.field]
+         -);                                                             
+      27 -    });                                                        
+      28 -  }                                                            
+      29 -});                                                            
+      36 +test.describe(                                                 
+      37 +  'POST /bookings validation',                                 
+      38 +  { tag: ['@api', '@regression'], annotation: { type: 'issue', 
+         +description: 'BOOK-412' } },                                   
+      39 +  () => {                                                      
+      40 +    for (const c of invalidCases) {                            
+      41 +      test(`rejects booking when ${c.name}`, async ({ bookingsC
+         +lient }) => {                                                  
+      42 +        const response = await bookingsClient.create(c.patch(aB
+         +ooking()).build());                                            
+      43 +                                                               
+      44 +        expect(response.status()).toBe(400);                   
+      45 +        const body = (await response.json()) as ErrorResponse; 
+      46 +        expect(body.code).toBe('VALIDATION_ERROR');            
+      47 +        expect(body.errors.map((e) => e.field).sort()).toEqual(
+         +[...c.fields].sort());                                         
+      48 +      });                                                      
+      49 +    }                                                          
+      50 +                                                               
+      51 +    for (const c of validCases) {                              
+      52 +      test(`accepts booking when ${c.name}`, async ({ bookingsC
+         +lient }) => {                                                  
+      53 +        const response = await bookingsClient.create(c.patch(aB
+         +ooking()).build());                                            
+      54 +                                                               
+      55 +        expect(response.status()).toBe(201);                   
+      56 +        const booking = (await response.json()) as Booking;    
+      57 +        await bookingsClient.delete(booking.id);               
+      58 +      });                                                      
+      59 +    }                                                          
+      60 +  },                                                           
+      61 +);                                                             
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I've updated tests/api/bookings/create-booking-validation.spec.ts to cover all
+  the BOOK-412 rules, with the ticket added as an issue annotation. All 17
+  booking tests pass (16 new ones plus the existing smoke test), and the
+  typecheck is clean.
+
+  Rejected with 400 and VALIDATION_ERROR (13 cases):
+  - Required fields: checkIn, checkOut or guests missing.
+  - Date format: checkIn or checkOut set to "not-a-date", or a real date in the
+    wrong format (12/01/2030, 2030/12/04).
+  - Date order: checkOut on the same day as checkIn, or the day before.
+  - Guests: 0, 9, or 2.5.
+  - Two errors at once: checkIn missing and guests set to 9, which should list
+    both fields. This checks the "exactly the invalid fields" rule.
+
+  Accepted with 201 (3 limit cases): checkOut one day after checkIn, guests of
+  1, and guests of 8. Each booking is deleted after the test.
+
+  Assertion details:
+  - When checkOut is on or before checkIn, I expect only checkOut to be
+    reported, since that's the field the rule is about. The service agrees, but
+    the ticket doesn't say which field it should be.
+  - I sort the field list before comparing it, because the ticket doesn't say
+    what order the errors come in.
+
+  I didn't add BOOK-412 to docs/tickets/ the way USR-101 is there. Say if you'd
+  like me to.
+
+✻ Worked for 27s · done 8:19 PM
+
+※ recap: We're adding negative tests for POST /bookings, and the spec now covers every BOOK-412 rule, with all 17 booking tests passing. Next, you decide whether to add BOOK-412 to docs/tickets alongside USR-101. (disable recaps in /config)

@@ -1,0 +1,66 @@
+diff --git a/tests/api/bookings/create-booking-validation.spec.ts b/tests/api/bookings/create-booking-validation.spec.ts
+new file mode 100644
+index 0000000..d567074
+--- /dev/null
++++ b/tests/api/bookings/create-booking-validation.spec.ts
+@@ -0,0 +1,60 @@
++import { test, expect } from '../../../src/fixtures';
++import { aBooking, type BookingBuilder } from '../../../src/data/bookings/BookingBuilder';
++import type { Booking, ErrorResponse } from '../../../src/models';
++
++type InvalidCase = { name: string; patch: (b: BookingBuilder) => BookingBuilder; fields: string[] };
++
++// Rules: BOOK-412 — checkIn/checkOut required, YYYY-MM-DD, checkOut after checkIn;
++// guests required, integer 1–8.
++const invalidCases: InvalidCase[] = [
++  { name: 'checkIn is missing', patch: (b) => b.withoutCheckIn(), fields: ['checkIn'] },
++  { name: 'checkOut is missing', patch: (b) => b.withoutCheckOut(), fields: ['checkOut'] },
++  { name: 'guests is missing', patch: (b) => b.withoutGuests(), fields: ['guests'] },
++  { name: 'checkIn is not YYYY-MM-DD', patch: (b) => b.withCheckIn('01/12/2030'), fields: ['checkIn'] },
++  { name: 'checkOut is not YYYY-MM-DD', patch: (b) => b.withCheckOut('2030-12-1'), fields: ['checkOut'] },
++  { name: 'checkOut is on the check-in day', patch: (b) => b.checkOutDaysAfterCheckIn(0), fields: ['checkOut'] },
++  { name: 'checkOut is before checkIn', patch: (b) => b.checkOutDaysAfterCheckIn(-1), fields: ['checkOut'] },
++  { name: 'guests is 0', patch: (b) => b.withGuests(0), fields: ['guests'] },
++  { name: 'guests is 9', patch: (b) => b.withGuests(9), fields: ['guests'] },
++  { name: 'guests is negative', patch: (b) => b.withGuests(-1), fields: ['guests'] },
++  { name: 'guests is not an integer', patch: (b) => b.withGuests(2.5), fields: ['guests'] },
++  {
++    name: 'checkIn and guests are both invalid',
++    patch: (b) => b.withoutCheckIn().withGuests(9),
++    fields: ['checkIn', 'guests'],
++  },
++];
++
++test.describe(
++  'POST /bookings validation',
++  { tag: ['@api', '@regression'], annotation: { type: 'issue', description: 'BOOK-412' } },
++  () => {
++    for (const c of invalidCases) {
++      test(`rejects booking when ${c.name}`, async ({ bookingsClient }) => {
++        const response = await bookingsClient.create(c.patch(aBooking()).build());
++
++        expect(response.status()).toBe(400);
++        const body = (await response.json()) as ErrorResponse;
++        expect(body.code).toBe('VALIDATION_ERROR');
++        // The ticket doesn't define error order, only one entry per invalid field.
++        expect(body.errors.map((e) => e.field).sort()).toEqual([...c.fields].sort());
++      });
++    }
++
++    const boundaryCases: { name: string; patch: (b: BookingBuilder) => BookingBuilder }[] = [
++      { name: '1 guest', patch: (b) => b.withGuests(1) },
++      { name: '8 guests', patch: (b) => b.withGuests(8) },
++      { name: 'checkOut one day after checkIn', patch: (b) => b.checkOutDaysAfterCheckIn(1) },
++    ];
++
++    for (const c of boundaryCases) {
++      test(`accepts booking with ${c.name}`, async ({ bookingsClient }) => {
++        const response = await bookingsClient.create(c.patch(aBooking()).build());
++
++        expect(response.status()).toBe(201);
++        const booking = (await response.json()) as Booking;
++        await bookingsClient.delete(booking.id);
++      });
++    }
++  },
++);

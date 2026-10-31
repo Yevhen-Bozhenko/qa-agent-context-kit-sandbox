@@ -1,0 +1,87 @@
+diff --git a/tests/api/bookings/create-booking-validation.spec.ts b/tests/api/bookings/create-booking-validation.spec.ts
+new file mode 100644
+index 0000000..9669cef
+--- /dev/null
++++ b/tests/api/bookings/create-booking-validation.spec.ts
+@@ -0,0 +1,81 @@
++import { test, expect } from '../../../src/fixtures';
++import { aBooking, type BookingBuilder } from '../../../src/data/bookings/BookingBuilder';
++import { addDays, daysFromToday } from '../../../src/utils/dates';
++import type { Booking, ErrorResponse } from '../../../src/models';
++
++type InvalidCase = { name: string; patch: (b: BookingBuilder) => BookingBuilder; fields: string[] };
++type InvalidCaseWithOpenFields = { name: string; patch: (b: BookingBuilder) => BookingBuilder; mustInclude?: string };
++type ValidCase = { name: string; patch: (b: BookingBuilder) => BookingBuilder };
++
++// Rules: BOOK-412 — checkIn/checkOut required, YYYY-MM-DD; checkOut after checkIn; guests integer 1..8.
++const invalidCases: InvalidCase[] = [
++  { name: 'checkOut is missing', patch: (b) => b.withoutCheckOut(), fields: ['checkOut'] },
++  {
++    name: 'checkOut is not in YYYY-MM-DD format',
++    patch: (b) => b.withCheckOut(addDays(daysFromToday(30), 3).replaceAll('-', '/')),
++    fields: ['checkOut'],
++  },
++  { name: 'guests is missing', patch: (b) => b.withoutGuests(), fields: ['guests'] },
++  { name: 'guests is 0', patch: (b) => b.withGuests(0), fields: ['guests'] },
++  { name: 'guests is 9', patch: (b) => b.withGuests(9), fields: ['guests'] },
++  { name: 'guests is not an integer', patch: (b) => b.withGuests(2.5), fields: ['guests'] },
++];
++
++// BOOK-412 does not say which field a checkOut-vs-checkIn violation is reported against, nor whether
++// checkOut is also flagged when checkIn is missing/malformed. Assert only what the ticket guarantees;
++// tighten to an exact field list once the ticket is clarified.
++const invalidCasesWithOpenFields: InvalidCaseWithOpenFields[] = [
++  { name: 'checkIn is missing', patch: (b) => b.withoutCheckIn(), mustInclude: 'checkIn' },
++  {
++    name: 'checkIn is not in YYYY-MM-DD format',
++    patch: (b) => b.withCheckIn(daysFromToday(30).replaceAll('-', '/')),
++    mustInclude: 'checkIn',
++  },
++  { name: 'checkOut is on the check-in day', patch: (b) => b.checkOutDaysAfterCheckIn(0) },
++  { name: 'checkOut is before checkIn', patch: (b) => b.checkOutDaysAfterCheckIn(-1) },
++];
++
++const boundaryValidCases: ValidCase[] = [
++  { name: 'checkOut is the day after checkIn', patch: (b) => b.checkOutDaysAfterCheckIn(1) },
++  { name: 'guests is 1', patch: (b) => b.withGuests(1) },
++  { name: 'guests is 8', patch: (b) => b.withGuests(8) },
++];
++
++test.describe(
++  'POST /bookings validation',
++  { tag: ['@api', '@regression'], annotation: { type: 'issue', description: 'BOOK-412' } },
++  () => {
++    for (const c of invalidCases) {
++      test(`rejects booking when ${c.name}`, async ({ bookingsClient }) => {
++        const response = await bookingsClient.create(c.patch(aBooking()).build());
++
++        expect(response.status()).toBe(400);
++        const body = (await response.json()) as ErrorResponse;
++        expect(body.code).toBe('VALIDATION_ERROR');
++        expect(body.errors.map((e) => e.field)).toEqual(c.fields);
++      });
++    }
++
++    for (const c of invalidCasesWithOpenFields) {
++      test(`rejects booking when ${c.name}`, async ({ bookingsClient }) => {
++        const response = await bookingsClient.create(c.patch(aBooking()).build());
++
++        expect(response.status()).toBe(400);
++        const body = (await response.json()) as ErrorResponse;
++        expect(body.code).toBe('VALIDATION_ERROR');
++        expect(body.errors.length).toBeGreaterThan(0);
++        if (c.mustInclude) expect(body.errors.map((e) => e.field)).toContain(c.mustInclude);
++      });
++    }
++
++    for (const c of boundaryValidCases) {
++      test(`accepts booking when ${c.name}`, async ({ bookingsClient }) => {
++        const response = await bookingsClient.create(c.patch(aBooking()).build());
++
++        expect(response.status()).toBe(201);
++        const booking = (await response.json()) as Booking;
++        await bookingsClient.delete(booking.id);
++      });
++    }
++  },
++);
